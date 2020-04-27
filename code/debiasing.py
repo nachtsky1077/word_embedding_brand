@@ -5,8 +5,7 @@ class EmbeddingDebias:
 
     def __init__(self, ds, embedding, k=1, method='Hard'):
         '''
-        ds: the set of words defining the bias subspace
-        embedding: a gensim embedding model
+        ds: sets of directions
         k: subspace dimension
         method: debias model, has to be "Hard" or "Soft"
         '''
@@ -22,15 +21,17 @@ class EmbeddingDebias:
         mus = []
         self._w = []
         self._C = np.zeros((self._embedding.vector_size, self._embedding.vector_size))
-        for i, words in enumerate(self._Ds):
-            mat = get_embedding_mat(words, self._embedding)
+        for _, mat in enumerate(self._Ds):
             self._w.append(mat)
             mu = np.mean(mat, axis=0)
             mus.append(mu)
-            num_words = len(words)
+            num_d = mat.shape[0]
             for j in range(mat.shape[0]):
-                w_mu = mat[j] - mu
-                self._C = self._C + w_mu.T @ w_mu / num_words
+                if mat.shape[0] > 0:
+                    w_mu = mat[j] - mu
+                else:
+                    w_mu = mat[j]
+                self._C = self._C + w_mu.T @ w_mu / num_d
         
         u, s, vh = np.linalg.svd(self._C)
         B = u[:, :self._k]
@@ -39,7 +40,7 @@ class EmbeddingDebias:
     def debiasing(self, es):
         if self._method == 'Hard':
             debiased_embeddings = []
-            for i, words in enumerate(es):
+            for _, words in enumerate(es):
                 mat = get_embedding_mat(words, self._embedding)
                 neutralized_mat = np.zeros_like(mat)
                 projected_mat = np.zeros_like(mat)

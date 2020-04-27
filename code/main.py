@@ -1,7 +1,9 @@
 from argparse import ArgumentParser
 import traceback
 import gensim
+import numpy as np
 from .debiasing import EmbeddingDebias
+from .utils import get_embedding_mat
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -24,8 +26,17 @@ if __name__ == '__main__':
         exit(-1)
 
     ds = [[word for word in D.split(',')] for D in args.subspace_words.split(';')]
+    
+    # prepare direction matrix sets
+    dmat = []
+    for _, words in ds:
+        mat = []
+        for word in words:
+            mat.append(get_embedding_mat(word, kv))
+        dmat.append(np.asarray(mat))
+
     es = [[word for word in E.split(',')] for E in args.neutral_words.split(';')]
-    debias_worker = EmbeddingDebias(ds, embedding=kv, k=args.subspace_dim, method=args.method)
+    debias_worker = EmbeddingDebias(dmat, embedding=kv, k=args.subspace_dim, method=args.method)
     print('Debiasing worker initialization completed.')
     
     print('Debiasing using {}-debias method for word sets {}'.format(args.method, es))
