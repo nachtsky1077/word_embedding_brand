@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 import traceback
 import gensim
 import numpy as np
+import json
 from .debiasing import EmbeddingDebias
 from .utils import get_embedding_mat
 
@@ -14,6 +15,7 @@ if __name__ == '__main__':
                         default='she,he;her,his;woman,man;Mary,John;herself,himself;daughter,son;mother,father;gal,guy;girl,boy;female,male', 
                         help='D sets of words, has to be in the form: w1_d1,w2_d1,...;w1_d2,w2_d2,...;...')
     parser.add_argument('--neutral_words', action='store', default='nurse', help='E sets of words, same format as subspace_words')
+    parser.add_argument('--cfg', action='store', type=str, default='None', help='configuration file')
     args = parser.parse_args()
 
     try:
@@ -25,14 +27,17 @@ if __name__ == '__main__':
         traceback.print_exc()
         exit(-1)
 
-    ds = [[word for word in D.split(',')] for D in args.subspace_words.split(';')]
-    
+    if args.cfg == 'None':
+        ds = [[word for word in D.split(',')] for D in args.subspace_words.split(';')]
+    else:
+        with open(args.cfg, 'r') as f:
+            cfg = json.load(f)
+            ds = cfg['definite_sets']
+
     # prepare direction matrix sets
     dmat = []
-    for _, words in ds:
-        mat = []
-        for word in words:
-            mat.append(get_embedding_mat(word, kv))
+    for _, words in enumerate(ds):
+        mat = get_embedding_mat(words, kv)
         dmat.append(np.asarray(mat))
 
     es = [[word for word in E.split(',')] for E in args.neutral_words.split(';')]

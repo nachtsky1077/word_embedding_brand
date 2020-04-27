@@ -20,21 +20,22 @@ class EmbeddingDebias:
     def _find_subspace(self):
         mus = []
         self._w = []
-        self._C = np.zeros((self._embedding.vector_size, self._embedding.vector_size))
+        self._C = []
         for _, mat in enumerate(self._Ds):
             self._w.append(mat)
             mu = np.mean(mat, axis=0)
             mus.append(mu)
             num_d = mat.shape[0]
             for j in range(mat.shape[0]):
-                if mat.shape[0] > 0:
+                if mat.shape[0] > 1:
                     w_mu = mat[j] - mu
                 else:
                     w_mu = mat[j]
-                self._C = self._C + w_mu.T @ w_mu / num_d
+                self._C.append(w_mu)
+        self._C = np.asarray(self._C)
         
         u, s, vh = np.linalg.svd(self._C)
-        B = u[:, :self._k]
+        B = vh[:self._k, :].T
         return B
 
     def debiasing(self, es):
@@ -62,3 +63,16 @@ class EmbeddingDebias:
         wb = self._Qb @ w
         w = w - wb
         return w / np.linalg.norm(w), wb
+
+    def project(self, word):
+        '''
+        :word: the word to be projected to the subspace
+        return: word projection onto the subspace
+        '''
+        try:
+            word_embedding = self._embedding[word]
+        except Exception:
+            print('Word "{}" not found in the w2v model.'.format(word))
+            return None
+        
+        return self._Qb @ word_embedding
