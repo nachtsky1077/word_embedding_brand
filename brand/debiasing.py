@@ -41,17 +41,16 @@ class EmbeddingDebias:
     def debiasing(self, es):
         if self._method == 'Hard':
             debiased_embeddings = []
-            for _, words in enumerate(es):
-                mat = get_embedding_mat(words, self._embedding)
+            for _, mat in enumerate(es):
                 neutralized_mat = np.zeros_like(mat)
                 projected_mat = np.zeros_like(mat)
                 debiased_mat = np.zeros_like(mat)
-                for j, word in enumerate(words):
+                for j in range(mat.shape[0]):
                     neutralized_mat[j], projected_mat[j] = self._neutralize_word(mat[j])
                 mu = np.mean(neutralized_mat, axis=0)
                 mu_b = self._Qb @ mu
                 v = mu - mu_b
-                for j, word in enumerate(words):
+                for j in range(mat.shape[0]):
                     wb_mub = projected_mat[j] - mu_b
                     debiased_mat[j] = v + np.sqrt(1 - np.linalg.norm(v)**2) * wb_mub / np.linalg.norm(wb_mub)
                 debiased_embeddings.append(debiased_mat)
