@@ -38,23 +38,36 @@ class EmbeddingDebias:
         B = vh[:self._k, :].T
         return B
 
-    def debiasing(self, es):
+    def debiasing(self, words, eq_sets):
         if self._method == 'Hard':
             debiased_embeddings = []
-            for _, mat in enumerate(es):
-                neutralized_mat = np.zeros_like(mat)
-                projected_mat = np.zeros_like(mat)
-                debiased_mat = np.zeros_like(mat)
-                for j in range(mat.shape[0]):
-                    neutralized_mat[j], projected_mat[j] = self._neutralize_word(mat[j])
-                mu = np.mean(neutralized_mat, axis=0)
-                mu_b = self._Qb @ mu
-                v = mu - mu_b
-                for j in range(mat.shape[0]):
-                    wb_mub = projected_mat[j] - mu_b
-                    debiased_mat[j] = v + np.sqrt(1 - np.linalg.norm(v)**2) * wb_mub / np.linalg.norm(wb_mub)
-                debiased_embeddings.append(debiased_mat)
-            return self._B, debiased_embeddings
+            
+            # first get projections onto bias subpace
+            for i, word in enumerate(words):
+                v = self._embedding[word]
+                v_b = self._Qb @ v
+                new_v = (v - v_b) / np.linalg.norm(v - v_b)
+                debiased_embeddings.append(new_v)
+            
+            # neutralize for each equality set
+            neutralized_embeddings = dict()
+            for eq_set in eq_sets:
+                mean = np.zeros((self._Qb.shape[0], ))
+                for word in eq_set:
+                    mean += self._embedding[word]
+                mean /= float(len(eq_set))
+                mean_b = self._Qb @ mean
+                upsilon = mean - mean_b
+
+                for word in eq_set:
+                    v = self._embedding[word]
+                    v_b = self._Qb @ v
+
+                    frac = (v_b - mean_b) / np.linalg.norm(v_b - mean_b)
+                    new_v = upsilon + np.sqrt(1 - np.sum(np.square(upsilon))) * frac
+                    neutralized_embeddings[word] = new_v
+            
+            return self._B, debiased_embeddings, neutralized_embeddings
         else:
             raise NotImplementedError
 
