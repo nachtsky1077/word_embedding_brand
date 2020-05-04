@@ -1,5 +1,6 @@
 import numpy as np
 from .utils import get_embedding_mat
+from sklearn.decomposition import PCA
 
 class EmbeddingDebias:
 
@@ -34,9 +35,9 @@ class EmbeddingDebias:
                 self._C.append(w_mu)
         self._C = np.asarray(self._C)
         
-        u, s, vh = np.linalg.svd(self._C)
-        B = vh[:self._k, :].T
-        return B
+        pca = PCA(n_components=self._k)
+        return pca.fit(self._C).components_
+
 
     def debiasing(self, words, eq_sets):
         if self._method == 'Hard':
