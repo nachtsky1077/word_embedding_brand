@@ -46,7 +46,6 @@ class EmbeddingDebias:
             # first get projections onto bias subpace
             for i, word in enumerate(words):
                 v = self._embedding[word]
-                print(self._B.shape)
                 v_b = self._Qb @ v
                 new_v = (v - v_b) / np.linalg.norm(v - v_b)
                 debiased_embeddings.append(new_v)
